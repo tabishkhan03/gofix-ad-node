@@ -20,7 +20,14 @@ router.post('/', async (req, res) => {
     await dbConnect();
 
     // Parse request body
-    const { senderUsername, recipientUsername, content, adData } = req.body;
+    const {
+      senderUsername,
+      senderHandle,
+      recipientUsername,
+      content,
+      priorMessage,
+      adData
+    } = req.body;
 
     // Validate required fields
     if (!senderUsername || !recipientUsername || !content) {
@@ -30,27 +37,34 @@ router.post('/', async (req, res) => {
     }
 
     // Check if a message from this sender already exists
-    const existingMessage = await Message.findOne({ 
-      senderUsername: senderUsername,
+    const existingMessage = await Message.findOne({
+      senderUsername,
       content: { $regex: /replied to an ad/ }
     });
 
     if (existingMessage) {
       console.log(`📝 Found existing message for ${senderUsername}, updating ad link...`);
-      
-      // If new ad link is provided and not null, update it
-      if (adData?.adLink && adData.adLink !== null) {
+
+      // If new ad link is provided, update it
+      if (adData?.adLink) {
         existingMessage.adData.adLink = adData.adLink;
         console.log(`🔗 Updated ad link for ${senderUsername}: ${adData.adLink}`);
       } else {
         console.log(`🔗 Keeping existing ad link for ${senderUsername}: ${existingMessage.adData?.adLink}`);
       }
-      
-      // Update the message
+
+      // Update other optional fields if provided
+      if (senderHandle) {
+        existingMessage.senderHandle = senderHandle;
+      }
+      if (priorMessage) {
+        existingMessage.priorMessage = priorMessage;
+      }
+
       existingMessage.updatedAt = new Date();
       const updatedMessage = await existingMessage.save();
       console.log('Message updated:', updatedMessage._id);
-      
+
       return res.status(200).json(updatedMessage);
     } else {
       // Create new message only if ad link is provided
@@ -61,14 +75,15 @@ router.post('/', async (req, res) => {
 
       const message = new Message({
         senderUsername,
+        senderHandle,
         recipientUsername,
         content,
+        priorMessage,
         adData: {
-          adLink: adData.adLink,
-        },
+          adLink: adData.adLink
+        }
       });
 
-      // Save to database
       const savedMessage = await message.save();
       console.log('Message saved:', savedMessage._id);
 
@@ -92,4 +107,4 @@ router.get('/', async (req, res) => {
   }
 });
 
-export default router; 
+export default router;
