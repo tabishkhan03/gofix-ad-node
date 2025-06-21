@@ -26,6 +26,10 @@ app.use(express.static('public'));
 // Database connection
 dbConnect().then(() => {
   console.log('✅ Connected to MongoDB');
+  // Start the scraper only after a successful DB connection
+  startScraper().catch(err => {
+    console.error('❌ Failed to start scraper:', err);
+  });
 }).catch(err => {
   console.error('❌ MongoDB connection error:', err);
 });
@@ -41,11 +45,6 @@ app.get('/', (req, res) => {
 // Serve the messages page
 app.get('/message', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'message.html'));
-});
-
-// Start the scraper when server starts
-startScraper().catch(err => {
-  console.error('❌ Failed to start scraper:', err);
 });
 
 // Start server
